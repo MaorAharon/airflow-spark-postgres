@@ -51,6 +51,7 @@ def main():
     local_path = f"/shared-data/yellow_tripdata_{pen.format('YYYY_MM')}.parquet"
     postgres_url = "jdbc:postgresql://postgres:5432/"
     postgres_tbl=f"stage.yellow_tripdata_{pen.format('YYYY_MM')}"
+    cnt_tbl = "taxi.ny_yellow_cnt"
     postgres_user='airflow'
     postgres_pwd='airflow'
     pgsql_jdbc="/shared-data/accessories/postgresql-42.2.6.jar"
@@ -69,8 +70,9 @@ def main():
         .withColumn("date", to_date(lit(pen.format('YYYY-MM-DD')), "yyyy-MM-dd"))
 
     df_2 = set_schema(df)
+    df_2.cache
 
-    LOGGER.info("Write the file into pgsql db")
+    LOGGER.info("Write the file into staging table")
     df_2.limit(10).write\
         .mode("overwrite")\
         .format("jdbc") \
@@ -81,6 +83,23 @@ def main():
         .option("driver", "org.postgresql.Driver") \
         .option("jar", pgsql_jdbc) \
         .save()
+
+    LOGGER.info("Write the file into count table")
+    schema = StructType([StructField("cnt", LongType(), True)])
+    cnt = df_2.count()
+    one_row_df = spark.createDataFrame([(cnt, )], schema=schema) \
+        .withColumn("date", to_date(lit(pen.format('YYYY-MM-DD')), "yyyy-MM-dd"))
+
+    LOGGER.info("Write the file into count table")
+    one_row_df.write \
+        .jdbc(url=postgres_url,
+              table=cnt_tbl,
+              mode="append",
+              properties={
+                  "user": postgres_user,
+                  "password": postgres_pwd,
+                  "driver": "org.postgresql.Driver"
+              })
 
     LOGGER.info("Delete file")
     os.remove(local_path)

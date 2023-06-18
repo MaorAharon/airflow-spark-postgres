@@ -108,9 +108,14 @@ spark-submit --master spark://spark:7077 --conf spark.master=spark://spark:7077 
 
 # postgres db examples: 
 docker exec -i -t postgres /bin/bash
+
 psql -U 'airflow' -d 'airflow'
+
 SELECT * FROM information_schema.schemata WHERE schema_name = 'stage';
+
 select date, count(*) as cnt from taxi.ny_yellow group by 1 order by 1;
+
+select * as cnt from taxi.ny_yellow_cnt order by 1;
 ```
  
 
@@ -136,6 +141,8 @@ docker-compose run airflow-webserver airflow users create --role Admin --usernam
 
 3. Click on + sign and fill in the necessary details for each source below:
     ![](./imgs/add_conn.png "add_conn")
+
+4. Trigger the dag `initialize-pgsql-schema` manually only once 
   
 #### Postgres
 

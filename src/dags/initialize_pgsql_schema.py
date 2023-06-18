@@ -88,4 +88,23 @@ with DAG("initialize-pgsql-schema",
            """,
     )
 
-    create_schema_stage >> create_schema_taxi >> create_tbl_ny_yellow
+    create_cnt_ny_yellow = PostgresOperator(
+        task_id='create_cnt_ny_yellow',
+        postgres_conn_id='postgres_conn',
+        sql=f"""
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT FROM pg_tables WHERE schemaname = 'taxi' AND tablename  = 'ny_yellow_cnt'
+          ) THEN
+            EXECUTE 
+                ('CREATE TABLE taxi.ny_yellow_cnt (
+                    cnt bigint,
+                    date date not null) 
+                    ');
+          END IF;
+        END $$;
+           """,
+    )
+
+    create_schema_stage >> create_schema_taxi >> [create_tbl_ny_yellow, create_cnt_ny_yellow]
