@@ -2,15 +2,15 @@
 - [Table of contents](#table-of-contents)
 - [Project Requirements](#project-requirements)
 - [Project Structure](#project-structure)
+- [Miniconda for IDEA](#Miniconda-for-idea)
 - [High Level Architecture](#high-level-architecture)
 - [:ship: Containers](#ship-containers)
 - [Step-by-Step](#step-by-step)
   - [1. Clone the Repository](#1-clone-the-repository)
   - [2. Setup environment](#2-setup-environment)
   - [3. Airflow: Create user for UI](#3-airflow-create-user-for-ui)
-  - [3.1 Airflow: Postgres, MinIO & Spark connections configuration](#31-airflow-postgres-minio--spark-connections-configuration)
+  - [3.1 Airflow: Postgres & Spark connections configuration](#31-airflow-postgres-minio--spark-connections-configuration)
     - [Postgres](#postgres)
-    - [MinIO](#minio)
     - [Spark](#spark)
 - [Stack](#stack)
 - [References](#references)
@@ -20,18 +20,16 @@
 This project was develop and tested using the following environment.
 
 
-|   Item             |        Version        |
-|----------------|-------------------------------|
-|Ubuntu          |`22.04.1 LTS`|
-|Docker|`20.10.17, build 100c701`            |
-|Docker Compose          |`1.29.2, build 5becea4c`            |
-|Visual Studio Code          |`1.71.0`|
-|Python          |`3.10.4`|
-|OpenJDK          |`11.0.16`|
-|Git          |`2.34.1`|
+| Item           | Version       |
+|----------------|---------------|
+| Ubuntu         | `20.04.6 LTS` |
+| Docker         | `23.0.2`      |
+| Docker Compose | `1.25.0`      |
+| Python         | `3.8.16`      |
+| OpenJDK        | `11.0.19`     |
+| Git            | `2.25.1`      |
+| Conda          | `4.12.0`      |
 
-
-> If due to license issues you are not allowed to use Docker it's possible to replace it with [Podman](https://podman.io/) which is an alternative highly recommended for companies such as RedHat.
 
 ## Project Structure
  
@@ -42,10 +40,32 @@ This challenge is currently structured with the following specifications.
 |----------------|-------------------------------|
 |src|`Dockefile, dags and Spark applications`            |
 
+## Miniconda for IDEA
+    # create env
+    conda create -n airlfow-spark-postgres python=3.8
+
+    # activate env
+    conda activate airlfow-spark-postgres
+    conda deactivate
+    
+    # add packages
+    pip install apache-airflow==2.2.4
+    pip install pyspark==3.2.1
+    pip install apache-airflow-providers-apache-spark==3.0.0
+    pip install wget
+
+    # check installed version
+    conda list pyspark -f
+    
+    # add `airlfow-spark-postgres` conda env as Python Interpreter an your IDEA project.
+
 ##  High Level Architecture
 
-  
-![](./imgs/HLA.png "HLA")
+    Database: PostgreSQL
+
+    ETL Orchestration: Airflow
+
+    Data Processing: Spark
 
 
 ## :ship: Containers
@@ -65,21 +85,32 @@ This challenge is currently structured with the following specifications.
 * **spark-worker**: Spark workers
     * image: bitnami/spark:3.2.1
 
-*  **MinIO**: Object storage
-
-   - image: bitnami/minio:latest
-    
 ## Step-by-Step
 
 ### 1. Clone the Repository
 
-`git clone https://github.com/andrejnevesjr/airflow-spark-minio-postgres.git`
+`git clone https://github.com/MaorAharon/airflow-spark-postgres.git`
 
 ### 2. Setup environment
 
 ```
-cd otrium-challenge
+# launch 
 docker-compose -f docker-compose.yml up -d
+
+# stop
+docker compose stop
+
+# pyspark / spark-submit examples 
+docker exec -i -t airflow /bin/bash
+pyspark --conf spark.sql.caseSensitive=True --conf spark.executor.memory=1024M --conf spark.driver.cores=1 --conf spark.driver.memory=1024M --jars /shared-data/accessories/postgresql-42.2.6.jar --total-executor-cores 1 
+spark-submit --master spark://spark:7077 --conf spark.master=spark://spark:7077 --conf spark.sql.caseSensitive=True --conf spark.executor.instances=1 --conf spark.executor.cores=1 --conf spark.executor.memory=1024M --conf spark.driver.cores=1 --conf spark.driver.memory=1024M --py-files /shared-data/accessories/wget.py --driver-class-path /shared-data/accessories/postgresql-42.2.6.jar --jars /shared-data/accessories/postgresql-42.2.6.jar --num-executors 1 --executor-cores 1 --queue root.default /usr/local/spark/applications/ny_yellow.py
+
+
+# postgres db examples: 
+docker exec -i -t postgres /bin/bash
+psql -U 'airflow' -d 'airflow'
+SELECT * FROM information_schema.schemata WHERE schema_name = 'stage';
+select date, count(*) as cnt from taxi.ny_yellow group by 1 order by 1;
 ```
  
 
@@ -91,7 +122,7 @@ To access Airflow UI is required to create a new user account, so in our case, w
 
 docker-compose run airflow-webserver airflow users create --role Admin --username airflow --email airflow@example.com --firstname airflow --lastname airflow --password airflow
 
-### 3.1 Airflow: Postgres, MinIO & Spark connections configuration
+### 3.1 Airflow: Postgres & Spark connections configuration
 
 1. Open the service in your browser at http://localhost:8085
    Use the credentials 
@@ -115,19 +146,7 @@ docker-compose run airflow-webserver airflow users create --role Admin --usernam
     Login: airflow
     Password: airflow
     Port: 5432
- 
 
-####   MinIO
-
-    Conn ID: minio_conn
-    Conn Type: Amazon S3
-    Extra: consists of the JSON below:
-```
-    { "aws_access_key_id":"airflow",
-      "aws_secret_access_key": "airflow",
-      "host": "http://bucket:9000"
-    }
-```
 ####   Spark
 
     Conn ID: spark_conn
@@ -144,7 +163,6 @@ docker-compose run airflow-webserver airflow users create --role Admin --usernam
 |        Application        |URL                          |Credentials                         |
 |----------------|-------------------------------|-----------------------------|
 |Airflow| [http://localhost:8085](http://localhost:8085) | ``` User: airflow``` <br> ``` Pass: airflow``` |         |
-|MinIO| [http://localhost:9001](http://localhost:9001) | ``` User: airflow``` <br> ``` Pass: airflow``` |           |
 |Postgres| **Server/Database:** localhost:5432/airflow | ``` User: airflow``` <br> ``` Pass: airflow``` |           |
 |Spark (Master) | [http://localhost:8081](http://localhost:8081)|  |         |
   
