@@ -89,8 +89,7 @@ To access Airflow UI is required to create a new user account, so in our case, w
 > **NOTE**: Before **RUN** the command below please confirm that Airflow is up and running, it can be checked by accessing the URL [http://localhost:8085](http://localhost:8085). Have in mind that in the first execution it may take 2 to 3 minutes :stuck_out_tongue_winking_eye:
 
 
-docker-compose run airflow-webserver airflow users create --role Admin --username airflow \
-      --email airflow@example.com --firstname airflow --lastname airflow --password airflow
+docker-compose run airflow-webserver airflow users create --role Admin --username airflow --email airflow@example.com --firstname airflow --lastname airflow --password airflow
 
 ### 3.1 Airflow: Postgres, MinIO & Spark connections configuration
 
