@@ -56,8 +56,8 @@ with DAG("load_ny_yellow",
          max_active_runs=3, # execute 3 in parallel
          ) as dag:
 
-    detach_drop_table = PostgresOperator(
-        task_id='detach_drop_table',
+    detach_drop_delete_table = PostgresOperator(
+        task_id='detach_drop_delete_table',
         postgres_conn_id='postgres_conn',
         sql="""
         DO $$
@@ -66,6 +66,7 @@ with DAG("load_ny_yellow",
           my_schema varchar := 'taxi';
           partition_table_schema varchar := 'stage';
           partition_table varchar := 'yellow_tripdata_{{ logical_date.strftime('%Y_%m') }}';
+          ld varchar := '{{ logical_date.format('YYYY-MM-DD') }}';
         BEGIN
           IF EXISTS (
             SELECT *
@@ -84,6 +85,12 @@ with DAG("load_ny_yellow",
             SELECT FROM pg_tables WHERE schemaname = format('%I', partition_table_schema) AND tablename = format('%I', partition_table)
           ) THEN
             EXECUTE format('DROP TABLE %I.%I', partition_table_schema, partition_table);
+          END IF;
+          
+          IF EXISTS (
+            SELECT * FROM taxi.ny_yellow_cnt WHERE date = TO_DATE(ld, 'YYYY-MM-DD')	
+          ) THEN
+            EXECUTE format('DELETE FROM taxi.ny_yellow_cnt WHERE date = ''%I'' ', ld);  
           END IF;
           
         END $$;
@@ -208,5 +215,5 @@ with DAG("load_ny_yellow",
         trigger_rule=TriggerRule.ALL_DONE
     )
 
-    detach_drop_table >> create_stage_tbl >> process_spark_download >> process_spark_load >> \
+    detach_drop_delete_table >> create_stage_tbl >> process_spark_download >> process_spark_load >> \
     alter_stage_tbl >> cnt_stage >> is_stage_empty >> [attach_partition, drop_table] >> complete
