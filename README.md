@@ -46,7 +46,6 @@ This challenge is currently structured with the following specifications.
 
     # activate env
     conda activate airlfow-spark-postgres
-    conda deactivate
     
     # add packages
     pip install apache-airflow==2.2.4
@@ -57,7 +56,7 @@ This challenge is currently structured with the following specifications.
     # check installed version
     conda list pyspark -f
     
-    # add `airlfow-spark-postgres` conda env as Python Interpreter an your IDEA project.
+    # add `airlfow-spark-postgres` conda env as a Python Interpreter in your IDEA project.
 
 ##  High Level Architecture
 
@@ -95,27 +94,25 @@ This challenge is currently structured with the following specifications.
 
 ```
 # launch 
-docker-compose -f docker-compose.yml up -d
+$ docker-compose -f docker-compose.yml up -d
 
 # stop
-docker compose stop
+# $ docker compose stop
 
 # pyspark / spark-submit examples 
-docker exec -i -t airflow /bin/bash
-pyspark --conf spark.sql.caseSensitive=True --conf spark.executor.memory=1024M --conf spark.driver.cores=1 --conf spark.driver.memory=1024M --jars /shared-data/accessories/postgresql-42.2.6.jar --total-executor-cores 1 
-spark-submit --master spark://spark:7077 --conf spark.master=spark://spark:7077 --conf spark.sql.caseSensitive=True --conf spark.executor.instances=1 --conf spark.executor.cores=1 --conf spark.executor.memory=1024M --conf spark.driver.cores=1 --conf spark.driver.memory=1024M --py-files /shared-data/accessories/wget.py --driver-class-path /shared-data/accessories/postgresql-42.2.6.jar --jars /shared-data/accessories/postgresql-42.2.6.jar --num-executors 1 --executor-cores 1 --queue root.default /usr/local/spark/applications/ny_yellow.py
+$ docker exec -i -t airflow /bin/bash
+
+$ pyspark --conf spark.sql.caseSensitive=True --conf spark.executor.memory=1024M --conf spark.driver.cores=1 --conf spark.driver.memory=1024M --jars /shared-data/accessories/postgresql-42.2.6.jar --total-executor-cores 1 
+$ spark-submit --master spark://spark:7077 --conf spark.master=spark://spark:7077 --conf spark.sql.caseSensitive=True --conf spark.executor.instances=1 --conf spark.executor.cores=1 --conf spark.executor.memory=1024M --conf spark.driver.cores=1 --conf spark.driver.memory=1024M --py-files /shared-data/accessories/wget.py --driver-class-path /shared-data/accessories/postgresql-42.2.6.jar --jars /shared-data/accessories/postgresql-42.2.6.jar --num-executors 1 --executor-cores 1 --queue root.default /usr/local/spark/applications/ny_yellow.py
 
 
 # postgres db examples: 
-docker exec -i -t postgres /bin/bash
+$ docker exec -i -t postgres /bin/bash
+$ psql -U 'airflow' -d 'airflow'
 
-psql -U 'airflow' -d 'airflow'
-
-SELECT * FROM information_schema.schemata WHERE schema_name = 'stage';
-
-select date, count(*) as cnt from taxi.ny_yellow group by 1 order by 1;
-
-select * as cnt from taxi.ny_yellow_cnt order by 1;
+>> SELECT * FROM information_schema.schemata WHERE schema_name = 'stage';
+>> select date, count(*) as cnt from taxi.ny_yellow group by 1 order by 1;
+>> select * as cnt from taxi.ny_yellow_cnt order by 1;
 ```
  
 
